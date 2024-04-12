@@ -139,7 +139,6 @@ int main(int argc, char *argv[]) {
 
     l_list *list1_ptr, *list2_ptr, *list3_ptr, *list4_ptr;
 
-
     SDL_Init(SDL_INIT_EVERYTHING);
 
     SDL_Window *directedWindow = SDL_CreateWindow("Directed Graph", SDL_WINDOWPOS_UNDEFINED,
