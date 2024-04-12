@@ -488,16 +488,18 @@ matrix generateCondensedMatrix(matrix graphMatrix, matrix KMatrix, int *n) {
         for (int j = 0; j < N; ++j)
             if (KMatrix.matrix[i][j] != 0) {
                 *n = *n + 1;
+                i++;
                 break;
             }
+    *n = *n + 1;
 
     matrix condensedMatrix;
 
     for (int k = 0; k < *n; ++k)
         for (int i = 0; i < N; ++i)
             for (int j = 0; j < N; ++j) {
-                if(KMatrix.matrix[k][i] == 1 && KMatrix.matrix[k + 1][j] == 1)
-                    if(graphMatrix.matrix[i][j] == 1) {
+                if (KMatrix.matrix[k][i] == 1 && KMatrix.matrix[k + 1][j] == 1)
+                    if (graphMatrix.matrix[i][j] == 1) {
                         condensedMatrix.matrix[k][k + 1] = 1;
                         break;
                     }
