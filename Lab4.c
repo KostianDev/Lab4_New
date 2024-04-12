@@ -125,6 +125,7 @@ int main(int argc, char *argv[]) {
     matrix switchedMatrix = switchLines(stronglyConnectedMatrix, vertices,
                                         &lineToSwitch1, &lineToSwitch2);
 
+
     printMatrix(directedMatrix, fptr, dirG);
     printMatrix(undirectedMatrix, fptr, undirG);
     printMatrix(newDirectedMatrix, fptr, newDirG);
