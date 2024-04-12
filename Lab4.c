@@ -502,7 +502,8 @@ matrix generateCondensedMatrix(matrix graphMatrix, matrix KMatrix, int *n) {
                     if (graphMatrix.matrix[i][j] == 1) {
                         condensedMatrix.matrix[k][k + 1] = 1;
                         break;
-                    }
+                    } else
+                        condensedMatrix.matrix[i][j] = 0;
             }
 
     return condensedMatrix;
