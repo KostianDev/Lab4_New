@@ -504,6 +504,7 @@ matrix generateCondensedMatrix(matrix graphMatrix, matrix KMatrix, int *n) {
                         break;
                     }
             }
+
     return condensedMatrix;
 }
 
