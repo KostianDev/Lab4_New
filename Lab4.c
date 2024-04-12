@@ -483,6 +483,7 @@ matrix printStrConnComponents(int vertices[N], FILE *fptr) {
 }
 
 matrix generateCondensedMatrix(matrix graphMatrix, matrix KMatrix, int *n) {
+    int m = 0, p = 0;
 
     for (int i = 0; i < N; ++i)
         for (int j = 0; j < N; ++j)
@@ -495,16 +496,17 @@ matrix generateCondensedMatrix(matrix graphMatrix, matrix KMatrix, int *n) {
 
     matrix condensedMatrix;
 
-    for (int k = 0; k < *n; ++k)
-        for (int i = 0; i < N; ++i)
-            for (int j = 0; j < N; ++j) {
-                if (KMatrix.matrix[k][i] == 1 && KMatrix.matrix[k + 1][j] == 1)
-                    if (graphMatrix.matrix[i][j] == 1) {
+    for (int k = 0; k < *n; ++k) {
+        while (m < N)
+            while (p < N)
+                if (KMatrix.matrix[k][m] == 1 && KMatrix.matrix[k + 1][p] == 1) {
+                    if (graphMatrix.matrix[m][p] == 1) {
                         condensedMatrix.matrix[k][k + 1] = 1;
                         break;
-                    } else
-                        condensedMatrix.matrix[i][j] = 0;
-            }
+                    } else condensedMatrix.matrix[k][k + 1] = 0;
+                } else p++;
+        m++;
+    }
 
     return condensedMatrix;
 }
