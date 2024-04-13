@@ -61,11 +61,9 @@ matrix transposeMatrix(matrix passMatrix);
 
 matrix multByElements(matrix matrixA, matrix matrixB);
 
-matrix matrixUnion(matrix matrixA, matrix matrixB);
-
-matrix makeIrreflexive(matrix passMatrix);
-
 matrix switchLines(matrix passMatrix, int lines[N], int *number1, int *number2);
+
+matrix printStrConnComponents(int vertices[N], FILE *fptr);
 
 matrix generateCondensedMatrix(matrix graphMatrix, matrix KMatrix, int *n);
 
@@ -83,8 +81,6 @@ void printDirTrailsL2(matrix squaredMatrix, matrix passMatrix, FILE *fptr);
 
 void printDirTrailsL3(matrix cubedMatrix, matrix squaredMatrixTransformed, matrix passMatrix, FILE *fptr);
 
-matrix printStrConnComponents(int vertices[N], FILE *fptr);
-
 void clearScreen(SDL_Renderer *Renderer);
 
 void drawCircle(SDL_Renderer *renderer, int32_t centreX, int32_t centreY, int32_t radius);
@@ -101,7 +97,7 @@ void drawConnections(SDL_Renderer *renderer, l_list *node1, l_list *node2,
                      int r, int dir, int width, int height, int gap2, int size);
 
 int main(int argc, char *argv[]) {
-    srand(seed);
+    srand(36);
 
     FILE *fptr;
 
@@ -136,7 +132,6 @@ int main(int argc, char *argv[]) {
     printMatrix(switchedMatrix, fptr, "switched strongly connected");
     matrix KMatrix = printStrConnComponents(vertices, fptr);
     matrix condensedMatrix = generateCondensedMatrix(newDirectedMatrix, KMatrix, &n);
-    printMatrix(condensedMatrix, fptr, "condensed graph");
 
     l_list *list1_ptr, *list2_ptr, *list3_ptr, *list4_ptr;
 
@@ -198,7 +193,7 @@ int main(int argc, char *argv[]) {
         list3_ptr = drawGraph(newDirectedRenderer, newDirectedWindow,
                               newDirectedMatrix, list3_ptr, N);
         list4_ptr = drawGraph(condensedGraphRenderer, condensedGraphWindow,
-                              stronglyConnectedMatrix, list4_ptr, n);
+                              condensedMatrix, list4_ptr, n);
 
         SDL_RenderPresent(undirectedRenderer);
         SDL_RenderPresent(directedRenderer);
@@ -387,24 +382,6 @@ matrix multByElements(matrix matrixA, matrix matrixB) {
     return midMatrix;
 }
 
-matrix matrixUnion(matrix matrixA, matrix matrixB) {
-    matrix midMatrix;
-
-    for (int i = 0; i < N; ++i)
-        for (int j = 0; j < N; ++j) {
-            if (matrixA.matrix[i][j] >= 1 || matrixB.matrix[i][j] >= 1)
-                midMatrix.matrix[i][j] = (matrixA.matrix[i][j] >= matrixB.matrix[i][j]) ?
-                                         matrixA.matrix[i][j] : matrixB.matrix[i][j];
-        }
-    return midMatrix;
-}
-
-matrix makeIrreflexive(matrix passMatrix) {
-    for (int i = 0; i < N; ++i)
-        passMatrix.matrix[i][i] = 0;
-    return passMatrix;
-}
-
 matrix switchLines(matrix passMatrix, int lines[N], int *number1, int *number2) {
     matrix midMatrix = passMatrix;
     int a, line = 0, n = 0;
@@ -454,25 +431,28 @@ matrix printStrConnComponents(int vertices[N], FILE *fptr) {
     int n = 1, vertex;
     matrix KMatrix;
 
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            KMatrix.matrix[i][j] = 0;
+        }
+    }
+
     fptr = fopen("Output.txt", "a");
     fprintf(fptr, "\nHere are your strongly connected components:\n\n");
 
     while (vertices[N - 1] != -1) {
         fprintf(fptr, "K%d = {", n);
-        for (int i = 0; i < N; ++i) {
+        for (int i = 0; i < N; ++i)
             if (vertices[i] != -1) {
                 vertex = vertices[i];
-                for (int j = 0; j < N; ++j) {
+                for (int j = 0; j < N; ++j)
                     if (vertices[j] == vertex && vertices[j] != 0) {
                         fprintf(fptr, " %d ", j + 1);
                         KMatrix.matrix[n - 1][j] = 1;
                         vertices[j] = -1;
-                    } else
-                        KMatrix.matrix[n - 1][j] = 0;
-                }
+                    }
                 break;
             }
-        }
         fprintf(fptr, "}\n");
         n++;
     }
@@ -483,31 +463,36 @@ matrix printStrConnComponents(int vertices[N], FILE *fptr) {
 }
 
 matrix generateCondensedMatrix(matrix graphMatrix, matrix KMatrix, int *n) {
-    int m = 0, p = 0;
 
     for (int i = 0; i < N; ++i)
         for (int j = 0; j < N; ++j)
-            if (KMatrix.matrix[i][j] != 0) {
+            if (KMatrix.matrix[i][j] == 1) {
                 *n = *n + 1;
-                i++;
                 break;
             }
-    *n = *n + 1;
 
     matrix condensedMatrix;
 
-    for (int k = 0; k < *n; ++k) {
-        while (m < N)
-            while (p < N)
-                if (KMatrix.matrix[k][m] == 1 && KMatrix.matrix[k + 1][p] == 1) {
-                    if (graphMatrix.matrix[m][p] == 1) {
-                        condensedMatrix.matrix[k][k + 1] = 1;
-                        break;
-                    } else condensedMatrix.matrix[k][k + 1] = 0;
-                } else p++;
-        m++;
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            condensedMatrix.matrix[i][j] = 0;
+        }
     }
 
+    if (*n > 1)
+        for (int k = 0; k < *n; ++k)
+            for (int l = 0; l < *n; ++l)
+                for (int i = 0; i < N; ++i)
+                    for (int j = 0; j < N; ++j)
+                        if (k != l)
+                            if ((KMatrix.matrix[k][i] == 1 && KMatrix.matrix[l][j] == 1) &&
+                                condensedMatrix.matrix[k][l] != 1)
+                                if (graphMatrix.matrix[i][j] == 1 && k != l) {
+                                    condensedMatrix.matrix[k][l] = 1;
+                                    i = 0;
+                                    j = 0;
+                                    l++;
+                                }
     return condensedMatrix;
 }
 
@@ -764,79 +749,118 @@ l_list *drawGraph(SDL_Renderer *renderer, SDL_Window *window, matrix matrix, l_l
     int width, height, xTopCircles, xLowCircles, yCircles, turn = 1, mid;
     int gap, gap1, gap2, gap3, r, key = 1, pos = 1, degree = 0, outDegree = 0, inDegree = 0, flag = 1;
 
-    mid = (abs(size - 5)) / 4;
-    yCircles = 2 + mid * 2;
-    xLowCircles = (size - yCircles) / 2;
-    xTopCircles = size - xLowCircles - yCircles;
+    if (size == 0) return NULL;
+
     SDL_GetWindowSize(window, &width, &height);
 
-    r = (height > width || (size >= 7 && size < 9)) ? width / (int) ((sizeMult + 1) * (xTopCircles + 1) + sizeMult) :
-        height / ((sizeMult + 1) * (yCircles / 2 + 1) + sizeMult);
+    if (size < 4) {
+        if (size == 1) {
+            r = (height > width) ? width / 8 : height / 8;
+            gap = r * sizeMult;
 
-    gap = r * sizeMult;
-    gap1 = (width - 2 * gap - (xTopCircles + 1) * 2 * r) / xTopCircles;
-    gap2 = (height - (yCircles / 2 + 1) * 2 * r) / (yCircles / 2 + 2);
-    gap3 = (width - 2 * gap - (xLowCircles + 1) * 2 * r) / xLowCircles;
+            drawCircle(renderer, width / 2, height / 2, r);
+            drawVertexNumber(renderer, key, width / 2, height / 2, gap);
+            list_ptr = l_list_init(key, width / 2, height / 2, pos, degree, outDegree, inDegree);
+        } else {
+            r = (height > width) ? width / 12 : height / 12;
 
-    drawCircle(renderer, gap + r, gap2 + r, r);
-    drawVertexNumber(renderer, key, gap + r, gap2 + r, gap);
-    list_ptr = l_list_init(key, gap + r, gap2 + r, pos, degree, outDegree, inDegree);
-    key++;
+            gap = r * sizeMult;
+            gap2 = (height - 2 * r) / 2;
+            gap3 = (width - 2 * gap - size * 2 * r) / (size - 1);
 
-    while (key <= size) {
-        switch (turn % 4) {
-            case 1:
-                for (int j = 1; j < xTopCircles; ++j) {
-                    drawCircle(renderer, gap + r + j * (2 * r + gap1),
-                               gap2 + r, r);
-                    drawVertexNumber(renderer, key, gap + r + j * (2 * r + gap1),
-                                     gap2 + r, gap);
-                    list_ptr = addto_list(list_ptr, key,
-                                          gap + r + j * (2 * r + gap1), gap2 + r, pos,
-                                          degree, outDegree, inDegree);
-                    key++;
-                }
-                break;
-            case 2:
-                for (int j = 0; j < yCircles / 2; ++j) {
-                    drawCircle(renderer, width - gap - r,
-                               (gap2 + r) + j * (gap2 + 2 * r), r);
-                    drawVertexNumber(renderer, key, width - gap - r,
-                                     (gap2 + r) + j * (gap2 + 2 * r), gap);
-                    list_ptr = addto_list(list_ptr, key,
-                                          width - gap - r, (gap2 + r) + j * (gap2 + 2 * r), pos,
-                                          degree, outDegree, inDegree);
-                    key++;
-                }
-                break;
-            case 3:
-                for (int j = 0; j < xLowCircles; ++j) {
-                    drawCircle(renderer, width - gap - r - j * (2 * r + gap3),
-                               height - gap2 - r, r);
-                    drawVertexNumber(renderer, key, width - gap - r - j * (2 * r + gap3),
-                                     height - gap2 - r, gap);
-                    list_ptr = addto_list(list_ptr, key,
-                                          width - gap - r - j * (2 * r + gap3), height - gap2 - r, pos,
-                                          degree, outDegree, inDegree);
-                    key++;
-                }
-                break;
-            case 0:
-                for (int j = 0; j < yCircles / 2; ++j) {
-                    drawCircle(renderer, gap + r,
-                               height - (r + gap2) - j * (2 * r + gap2), r);
-                    drawVertexNumber(renderer, key, gap + r,
-                                     height - (r + gap2) - j * (2 * r + gap2), gap);
-                    list_ptr = addto_list(list_ptr, key,
-                                          gap + r, height - (r + gap2) - j * (2 * r + gap2), pos,
-                                          degree, outDegree, inDegree);
-                    key++;
-                }
-                break;
+            drawCircle(renderer, gap + r, height / 2, r);
+            drawVertexNumber(renderer, key, gap + r, height / 2, gap);
+            list_ptr = l_list_init(key, gap + r, height / 2, pos, degree, outDegree, inDegree);
+            key++;
+
+            for (int i = 1; i < size; ++i) {
+                drawCircle(renderer, gap + r + i * (2 * r + gap3),
+                           height / 2, r);
+                drawVertexNumber(renderer, key, gap + r + i * (2 * r + gap3),
+                                 height / 2, gap);
+                list_ptr = addto_list(list_ptr, key,
+                                      gap + r + i * (2 * r + gap3), height / 2, pos,
+                                      degree, outDegree, inDegree);
+                key++;
+            }
         }
-        turn++;
-        pos++;
+    } else {
+
+        mid = (abs(size - 5)) / 4;
+        yCircles = 2 + mid * 2;
+        xLowCircles = (size - yCircles) / 2;
+        xTopCircles = size - xLowCircles - yCircles;
+
+        r = (height > width || (size >= 7 && size < 9)) ?
+            width / (int) ((sizeMult + 1) * (xTopCircles + 1) + sizeMult) :
+            height / ((sizeMult + 1) * (yCircles / 2 + 1) + sizeMult);
+
+        gap = r * sizeMult;
+        gap1 = (width - 2 * gap - (xTopCircles + 1) * 2 * r) / xTopCircles;
+        gap2 = (height - (yCircles / 2 + 1) * 2 * r) / (yCircles / 2 + 2);
+        gap3 = (width - 2 * gap - (xLowCircles + 1) * 2 * r) / xLowCircles;
+
+        drawCircle(renderer, gap + r, gap2 + r, r);
+        drawVertexNumber(renderer, key, gap + r, gap2 + r, gap);
+        list_ptr = l_list_init(key, gap + r, gap2 + r, pos, degree, outDegree, inDegree);
+        key++;
+
+        while (key <= size) {
+            switch (turn % 4) {
+                case 1:
+                    for (int j = 1; j < xTopCircles; ++j) {
+                        drawCircle(renderer, gap + r + j * (2 * r + gap1),
+                                   gap2 + r, r);
+                        drawVertexNumber(renderer, key, gap + r + j * (2 * r + gap1),
+                                         gap2 + r, gap);
+                        list_ptr = addto_list(list_ptr, key,
+                                              gap + r + j * (2 * r + gap1), gap2 + r, pos,
+                                              degree, outDegree, inDegree);
+                        key++;
+                    }
+                    break;
+                case 2:
+                    for (int j = 0; j < yCircles / 2; ++j) {
+                        drawCircle(renderer, width - gap - r,
+                                   (gap2 + r) + j * (gap2 + 2 * r), r);
+                        drawVertexNumber(renderer, key, width - gap - r,
+                                         (gap2 + r) + j * (gap2 + 2 * r), gap);
+                        list_ptr = addto_list(list_ptr, key,
+                                              width - gap - r, (gap2 + r) + j * (gap2 + 2 * r), pos,
+                                              degree, outDegree, inDegree);
+                        key++;
+                    }
+                    break;
+                case 3:
+                    for (int j = 0; j < xLowCircles; ++j) {
+                        drawCircle(renderer, width - gap - r - j * (2 * r + gap3),
+                                   height - gap2 - r, r);
+                        drawVertexNumber(renderer, key, width - gap - r - j * (2 * r + gap3),
+                                         height - gap2 - r, gap);
+                        list_ptr = addto_list(list_ptr, key,
+                                              width - gap - r - j * (2 * r + gap3), height - gap2 - r, pos,
+                                              degree, outDegree, inDegree);
+                        key++;
+                    }
+                    break;
+                case 0:
+                    for (int j = 0; j < yCircles / 2; ++j) {
+                        drawCircle(renderer, gap + r,
+                                   height - (r + gap2) - j * (2 * r + gap2), r);
+                        drawVertexNumber(renderer, key, gap + r,
+                                         height - (r + gap2) - j * (2 * r + gap2), gap);
+                        list_ptr = addto_list(list_ptr, key,
+                                              gap + r, height - (r + gap2) - j * (2 * r + gap2), pos,
+                                              degree, outDegree, inDegree);
+                        key++;
+                    }
+                    break;
+            }
+            turn++;
+            pos++;
+        }
     }
+
     for (int i = 0; i < size; ++i)
         for (int j = 0; j < size; ++j)
             if (matrix.matrix[i][j] == 1) {
@@ -880,7 +904,7 @@ void drawConnections(SDL_Renderer *renderer, l_list *node1, l_list *node2,
     int gap = sizeMult * r;
     double angle1, angle2;
     if ((abs(node1->key - node2->key) == 1) ||
-        ((node1->key == 1 || node2->key == 1) && (node1->key == size || node2->key == size))) {
+        (((node1->key == 1 || node2->key == 1) && (node1->key == size || node2->key == size)) && size >= 4)) {
         angle1 = atan2(endY - startY, endX - startX);
         SDL_RenderDrawLine(renderer, startX + (int) ((double) r * cos(angle1 + shiftAngle)),
                            startY + (int) ((double) r * sin(angle1 + shiftAngle)),
