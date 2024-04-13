@@ -61,7 +61,7 @@ matrix transposeMatrix(matrix passMatrix);
 
 matrix multByElements(matrix matrixA, matrix matrixB);
 
-matrix switchLines(matrix passMatrix, int lines[N], int *number1, int *number2);
+matrix switchLines(matrix passMatrix, int lines[N]);
 
 matrix printStrConnComponents(int vertices[N], FILE *fptr);
 
@@ -97,7 +97,7 @@ void drawConnections(SDL_Renderer *renderer, l_list *node1, l_list *node2,
                      int r, int dir, int width, int height, int gap2, int size);
 
 int main(int argc, char *argv[]) {
-    srand(36);
+    srand(seed);
 
     FILE *fptr;
 
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
     const char newDirG[] = "new directed graph";
     const char sqrNewDirG[] = "squared new directed graph";
     const char cbNewDirG[] = "cubed new directed graph";
-    int flag = 0, vertices[N], lineToSwitch1, lineToSwitch2, n = 0;
+    int flag = 0, vertices[N], n = 0;
 
     matrix directedMatrix = generateDirectedMatrix(0);
     matrix undirectedMatrix = generateUndirectedMatrix(directedMatrix);
@@ -118,8 +118,7 @@ int main(int argc, char *argv[]) {
     matrix reachabilityMatrix = generateReachabilityMatrix(newDirectedMatrix);
     matrix stronglyConnectedMatrix = multByElements(reachabilityMatrix,
                                                     transposeMatrix(reachabilityMatrix));
-    matrix switchedMatrix = switchLines(stronglyConnectedMatrix, vertices,
-                                        &lineToSwitch1, &lineToSwitch2);
+    matrix switchedMatrix = switchLines(stronglyConnectedMatrix, vertices);
 
 
     printMatrix(directedMatrix, fptr, dirG);
@@ -382,9 +381,9 @@ matrix multByElements(matrix matrixA, matrix matrixB) {
     return midMatrix;
 }
 
-matrix switchLines(matrix passMatrix, int lines[N], int *number1, int *number2) {
+matrix switchLines(matrix passMatrix, int lines[N]) {
     matrix midMatrix = passMatrix;
-    int a, line = 0, n = 0;
+    int a, line = 0, n = 0, flag = 0, number1, number2;
 
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
@@ -394,35 +393,42 @@ matrix switchLines(matrix passMatrix, int lines[N], int *number1, int *number2) 
         line = 0;
     }
 
-    for (int i = 1; i < N - 1; ++i)
-        if (lines[i - 1] == lines[i + 1] && lines[i - 1] != lines[i]) {
-            *number1 = i;
-            line = lines[i - 1];
-            break;
-        } else if (lines[i] == lines[i + 1] && lines[i - 1] != lines[i]) {
-            *number1 = i - 1;
-            line = lines[i];
-            break;
-        } else if (lines[i - 1] == lines[i] && lines[i + 1] != lines[i]) {
-            *number1 = i + 1;
-            line = lines[i];
-            break;
-        }
-    for (int i = N - 1; i >= 0; --i)
-        if (lines[i] == line) {
-            *number2 = i;
-            break;
-        }
-
-    for (int i = 0; i < N; ++i) {
-        a = (int) midMatrix.matrix[i][*number2];
-        midMatrix.matrix[i][*number2] = midMatrix.matrix[i][*number1];
-        midMatrix.matrix[i][*number1] = a;
+    for (int i = 1; i < N; ++i) {
+        if(lines[0] == lines[i]) flag = 1;
+        else flag = 0;
     }
-    for (int j = 0; j < N; ++j) {
-        a = (int) midMatrix.matrix[*number2][j];
-        midMatrix.matrix[*number2][j] = midMatrix.matrix[*number1][j];
-        midMatrix.matrix[*number1][j] = a;
+
+    if(!flag) {
+        for (int i = 1; i < N - 1; ++i)
+            if (lines[i - 1] == lines[i + 1] && lines[i - 1] != lines[i]) {
+                number1 = i;
+                line = lines[i - 1];
+                break;
+            } else if (lines[i] == lines[i + 1] && lines[i - 1] != lines[i]) {
+                number1 = i - 1;
+                line = lines[i];
+                break;
+            } else if (lines[i - 1] == lines[i] && lines[i + 1] != lines[i]) {
+                number1 = i + 1;
+                line = lines[i];
+                break;
+            }
+        for (int i = N - 1; i >= 0; --i)
+            if (lines[i] == line) {
+                number2 = i;
+                break;
+            }
+
+        for (int i = 0; i < N; ++i) {
+            a = (int) midMatrix.matrix[i][number2];
+            midMatrix.matrix[i][number2] = midMatrix.matrix[i][number1];
+            midMatrix.matrix[i][number1] = a;
+        }
+        for (int j = 0; j < N; ++j) {
+            a = (int) midMatrix.matrix[number2][j];
+            midMatrix.matrix[number2][j] = midMatrix.matrix[number1][j];
+            midMatrix.matrix[number1][j] = a;
+        }
     }
     return midMatrix;
 }
