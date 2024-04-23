@@ -91,10 +91,14 @@ void drawArrowHead(SDL_Renderer *renderer, int endX, int endY, int gap, double a
 
 void drawVertexNumber(SDL_Renderer *renderer, int number, int x, int y, int gap);
 
-l_list *drawGraph(SDL_Renderer *renderer, SDL_Window *window, matrix matrix, l_list *list_ptr, int size);
+l_list *drawGraph(SDL_Renderer *renderer, SDL_Window *window, matrix matrix, l_list *list_ptr,
+                  int size, int isDir);
 
-void drawConnections(SDL_Renderer *renderer, l_list *node1, l_list *node2,
-                     int r, int dir, int width, int height, int gap2, int size);
+void drawDirConnections(SDL_Renderer *renderer, l_list *node1, l_list *node2,
+                        int r, int dir, int width, int height, int gap2, int size);
+
+void drawUndirConnections(SDL_Renderer *renderer, l_list *node1, l_list *node2,
+                          int r, int width, int height, int gap2, int size);
 
 int main(int argc, char *argv[]) {
     srand(seed);
@@ -186,13 +190,13 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(condensedGraphRenderer, 255, 255, 255, 0);
 
         list1_ptr = drawGraph(directedRenderer, directedWindow,
-                              directedMatrix, list1_ptr, N);
+                              directedMatrix, list1_ptr, N, 1);
         list2_ptr = drawGraph(undirectedRenderer, undirectedWindow,
-                              undirectedMatrix, list2_ptr, N);
+                              undirectedMatrix, list2_ptr, N, 0);
         list3_ptr = drawGraph(newDirectedRenderer, newDirectedWindow,
-                              newDirectedMatrix, list3_ptr, N);
+                              newDirectedMatrix, list3_ptr, N, 1);
         list4_ptr = drawGraph(condensedGraphRenderer, condensedGraphWindow,
-                              condensedMatrix, list4_ptr, n);
+                              condensedMatrix, list4_ptr, n, 1);
 
         SDL_RenderPresent(undirectedRenderer);
         SDL_RenderPresent(directedRenderer);
@@ -571,6 +575,7 @@ void printHalfDegrees(FILE *fptr, l_list *list_ptr, const char graphName[]) {
 }
 
 void printVertexStates(FILE *fptr, l_list *list_ptr, const char graphName[]) {
+    int flag1 = 0, flag2 = 0;
     l_list *this_node = list_ptr;
 
     fptr = fopen("Output.txt", "a");
@@ -578,12 +583,20 @@ void printVertexStates(FILE *fptr, l_list *list_ptr, const char graphName[]) {
     fprintf(fptr, "\nHere is a list of %s's isolated and leaf vertices:\n\n", graphName);
 
     while (this_node != NULL) {
-        if (this_node->degree == 0)
+        if (this_node->degree == 0) {
+            flag1 = 1;
             fprintf(fptr, "vertex number:%d, vertex is isolated;\n", this_node->key);
-        if (this_node->degree == 1)
+        }
+        if (this_node->degree == 1) {
+            flag2 = 1;
             fprintf(fptr, "vertex number:%d, this is a leaf vertex;\n", this_node->key);
+        }
         this_node = this_node->next_node;
     }
+    if(!flag1)
+        fprintf(fptr, "There are no isolated vertices in this graph");
+    if(!flag2)
+        fprintf(fptr, "There are no leaf vertices in this graph");
     fprintf(fptr, "\n");
 
     fclose(fptr);
@@ -751,8 +764,9 @@ void drawVertexNumber(SDL_Renderer *renderer, int number, int x, int y, int gap)
     TTF_CloseFont(font);
 }
 
-l_list *drawGraph(SDL_Renderer *renderer, SDL_Window *window, matrix matrix, l_list *list_ptr, int size) {
-    int width, height, xTopCircles, xLowCircles, yCircles, turn = 1, mid;
+l_list *drawGraph(SDL_Renderer *renderer, SDL_Window *window, matrix matrix, l_list *list_ptr,
+                  int size, int isDir) {
+    int width, height, xTopCircles, xLowCircles, yCircles, turn = 1, mid, dir = 0;
     int gap, gap1, gap2, gap3, r, key = 1, pos = 1, degree = 0, outDegree = 0, inDegree = 0, flag = 1;
 
     if (size == 0) return NULL;
@@ -887,20 +901,25 @@ l_list *drawGraph(SDL_Renderer *renderer, SDL_Window *window, matrix matrix, l_l
                     node1->outDegree++;
                     node1->inDegree++;
                 } else {
-                    int dir = 1;
-                    drawConnections(renderer, node1, node2, r, dir, width, height, gap2, size);
-                    if (matrix.matrix[j][i] == 1) {
+                    if(!isDir){
+                        matrix.matrix[j][i] = 0;
+                        drawUndirConnections(renderer, node1, node2, r, width, height, gap2, size);
+                    } else {
+                        dir = 1;
+                        drawDirConnections(renderer, node1, node2, r, dir, width, height, gap2, size);
+                    }
+                    if (matrix.matrix[j][i] == 1 && isDir != 0) {
                         matrix.matrix[j][i] = 0;
                         dir = -1;
-                        drawConnections(renderer, node2, node1, r, dir, width, height, gap2, size);
+                        drawDirConnections(renderer, node2, node1, r, dir, width, height, gap2, size);
                     }
                 }
             }
     return list_ptr;
 }
 
-void drawConnections(SDL_Renderer *renderer, l_list *node1, l_list *node2,
-                     int r, int dir, int width, int height, int gap2, int size) {
+void drawDirConnections(SDL_Renderer *renderer, l_list *node1, l_list *node2,
+                        int r, int dir, int width, int height, int gap2, int size) {
     int startX = node1->x, startY = node1->y, endX = node2->x, endY = node2->y;
     int mid1X, mid1Y, mid2X, mid2Y;
     int midX = (node1->x + node2->x) / 2;
@@ -953,6 +972,60 @@ void drawConnections(SDL_Renderer *renderer, l_list *node1, l_list *node2,
                                endY - (int) ((double) r * sin(angle1 - shiftAngle)));
             drawArrowHead(renderer, endX - (int) ((double) r * cos(angle1 - shiftAngle)),
                           endY - (int) ((double) r * sin(angle1 - shiftAngle)), gap, angle1);
+        }
+    }
+    node1->degree++;
+    node2->degree++;
+    node1->outDegree++;
+    node2->inDegree++;
+}
+
+void drawUndirConnections(SDL_Renderer *renderer, l_list *node1, l_list *node2,
+                          int r, int width, int height, int gap2, int size) {
+    int startX = node1->x, startY = node1->y, endX = node2->x, endY = node2->y;
+    int mid1X, mid1Y, mid2X, mid2Y;
+    int midX = (node1->x + node2->x) / 2;
+    int midY = (node1->y + node2->y) / 2;
+    int dirX = (node1->x - width / 2) <= 0 ? -1 : 1;
+    int dirY = (node1->y - height / 2) <= 0 ? -1 : 1;
+    int gap = sizeMult * r;
+    double angle1, angle2;
+    if ((abs(node1->key - node2->key) == 1) ||
+        ((node1->key == 1 || node2->key == 1) && (node1->key == size || node2->key == size))) {
+        angle1 = atan2(endY - startY, endX - startX);
+        SDL_RenderDrawLine(renderer, startX + (int) ((double) r * cos(angle1)),
+                           startY + (int) ((double) r * sin(angle1)),
+                           endX - (int) ((double) r * cos(angle1)),
+                           endY - (int) ((double) r * sin(angle1)));
+    } else {
+        if (startX == endX && (startX == gap + r || startX == width - gap - r)) {
+            mid1X = (int) ((double) (startX + midX) / 2 + gap * dirX);
+            mid1Y = (startY + midY) / 2;
+            mid2X = (int) ((double) (midX + endX) / 2 + gap * dirX);
+            mid2Y = (midY + endY) / 2;
+            angle1 = atan2(mid1Y - startY, mid1X - startX);
+            angle2 = atan2(endY - mid2Y, endX - mid2X);
+            drawBezierCurve(renderer, startX + (int) ((double) r * cos(angle1)), mid1X,
+                        mid2X, endX - (int) ((double) r * cos(angle2)),
+                        startY + (int) ((double) r * sin(angle1)), mid1Y,
+                        mid2Y, endY - (int) ((double) r * sin(angle2)));
+        } else if (startY == endY && (startY == gap2 + r || startY == height - gap2 - r)) {
+            mid1X = (startX + midX) / 2;
+            mid1Y = (int) ((double) (startY + midY) / 2 + gap * dirY);
+            mid2X = (midX + endX) / 2;
+            mid2Y = (int) ((double) (midY + endY) / 2 + gap * dirY);
+            angle1 = atan2(mid1Y - startY, mid1X - startX);
+            angle2 = atan2(endY - mid2Y, endX - mid2X);
+            drawBezierCurve(renderer, startX + (int) ((double) r * cos(angle1)), mid1X,
+                        mid2X, endX - (int) ((double) r * cos(angle2)),
+                        startY + (int) ((double) r * sin(angle1)), mid1Y,
+                        mid2Y, endY - (int) ((double) r * sin(angle2)));
+        } else {
+            angle1 = atan2(endY - startY, endX - startX);
+            SDL_RenderDrawLine(renderer, startX + (int) ((double) r * cos(angle1)),
+                               startY + (int) ((double) r * sin(angle1)),
+                               endX - (int) ((double) r * cos(angle1)),
+                               endY - (int) ((double) r * sin(angle1)));
         }
     }
     node1->degree++;
