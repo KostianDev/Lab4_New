@@ -594,9 +594,9 @@ void printVertexStates(FILE *fptr, l_list *list_ptr, const char graphName[]) {
         this_node = this_node->next_node;
     }
     if(!flag1)
-        fprintf(fptr, "There are no isolated vertices in this graph");
+        fprintf(fptr, "There are no isolated vertices in this graph\n");
     if(!flag2)
-        fprintf(fptr, "There are no leaf vertices in this graph");
+        fprintf(fptr, "There are no leaf vertices in this graph\n");
     fprintf(fptr, "\n");
 
     fclose(fptr);
